@@ -92,12 +92,13 @@ export default function ChatInterface({ user }: { user: User }) {
       console.log("[Chat] Calling Python endpoint directly...")
       console.log("[Chat] Symptoms:", userMessage.substring(0, 50))
 
-      // 🌟 FIX: Call Python analyze-symptoms endpoint directly
+      // 🌟 FIX: Updated payload to include user_id and use 'symptoms'
       const response = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          symptoms: userMessage,
+          symptoms: userMessage, // Matches backend's expected key
+          user_id: user.id, // Passes user ID to the backend
           user_intake: {
             nutrients: nutrientMap,
           },
@@ -115,8 +116,8 @@ export default function ChatInterface({ user }: { user: User }) {
       const data = await response.json()
       console.log("[Chat] Received data:", data)
 
-      // Validate response structure
-      if (!data.analysis) {
+      // Validate response structure (uses keys from corrected backend response)
+      if (!data.analysis) { 
         console.error("[Chat] Missing analysis in response:", data)
         throw new Error("Invalid response structure")
       }
@@ -125,9 +126,9 @@ export default function ChatInterface({ user }: { user: User }) {
         ...prev,
         {
           role: "assistant",
-          content: data.analysis,
-          nutrients: data.recommended_nutrients || [],
-          dietRecommendations: data.diet_recommendations || [],
+          content: data.analysis, // uses 'analysis' key
+          nutrients: data.recommended_nutrients || [], // uses 'recommended_nutrients' key
+          dietRecommendations: data.diet_recommendations || [], // uses 'diet_recommendations' key
         },
       ])
 

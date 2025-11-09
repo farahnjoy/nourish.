@@ -4,14 +4,16 @@ import { GoogleGenerativeAI } from "@google/generative-ai"
 
 export async function POST(request: NextRequest) {
   try {
-    const { message, userId } = await request.json()
+    // 🌟 FIX 1: Destructure correct keys from the frontend request
+    const { symptoms, user_id } = await request.json()
 
-    if (!message || !userId) {
-      return NextResponse.json({ error: "Message and userId are required" }, { status: 400 })
+    if (!symptoms || !user_id) {
+      return NextResponse.json({ error: "Symptoms and user_id are required" }, { status: 400 })
     }
 
-    console.log("[v0] Analyzing symptoms for user:", userId)
+    console.log("[v0] Analyzing symptoms for user:", user_id)
 
+    // Note: Use a service role key for RLS bypassing if needed, otherwise use public key
     const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
 
     // Get nutrient intake from last 7 days
@@ -21,7 +23,7 @@ export async function POST(request: NextRequest) {
     const { data: intakeData, error: intakeError } = await supabase
       .from("nutrient_intake")
       .select("nutrient_id, amount, unit")
-      .eq("user_id", userId)
+      .eq("user_id", user_id) // Use the fixed user_id
       .gte("meal_time", sevenDaysAgo.toISOString())
 
     const { data: nutrients } = await supabase.from("nutrients").select("id, name, daily_value, unit")
@@ -30,8 +32,8 @@ export async function POST(request: NextRequest) {
     const nutrientMap: Record<string, { amount: number; unit: string; target: string }> = {}
 
     if (intakeData && nutrients) {
-      intakeData.forEach((intake) => {
-        const nutrient = nutrients.find((n) => n.id === intake.nutrient_id)
+      intakeData.forEach((intake: any) => {
+        const nutrient = nutrients.find((n: any) => n.id === intake.nutrient_id)
         if (nutrient) {
           if (!nutrientMap[nutrient.name]) {
             nutrientMap[nutrient.name] = {
@@ -58,7 +60,7 @@ export async function POST(request: NextRequest) {
 
     const analysisPrompt = `You are a nutrition expert AI assistant. A user is describing symptoms they're experiencing. 
 
-USER SYMPTOMS: ${message}
+USER SYMPTOMS: ${symptoms} // Use the fixed 'symptoms' variable
 
 USER'S CURRENT NUTRIENT INTAKE (last 7 days average):
 ${JSON.stringify(nutrientMap, null, 2)}
@@ -70,9 +72,9 @@ Analyze their symptoms in the context of their current nutritional intake. Ident
 
 Return your response in this JSON format:
 {
-  "analysis": "Your detailed analysis of their symptoms and current nutrition (2-3 paragraphs)",
-  "recommended_nutrients": ["Nutrient 1", "Nutrient 2", ...],
-  "diet_recommendations": ["Specific food recommendation 1", "Specific food recommendation 2", ...]
+  "analysis": "Your detailed analysis of their symptoms and current nutrition (2-3 paragraphs)",
+  "recommended_nutrients": ["Nutrient 1", "Nutrient 2", ...],
+  "diet_recommendations": ["Specific food recommendation 1", "Specific food recommendation 2", ...]
 }
 
 Be empathetic, specific, and actionable. Reference their actual intake data.`
@@ -103,10 +105,11 @@ Be empathetic, specific, and actionable. Reference their actual intake data.`
       }
     }
 
+    // 🌟 FIX 2: Return keys that the frontend expects
     return NextResponse.json({
-      response: analysis.analysis,
-      nutrients: analysis.recommended_nutrients || [],
-      dietRecommendations: analysis.diet_recommendations || [],
+      analysis: analysis.analysis, // Frontend expects 'analysis'
+      recommended_nutrients: analysis.recommended_nutrients || [], // Frontend expects 'recommended_nutrients'
+      diet_recommendations: analysis.diet_recommendations || [], // Frontend expects 'diet_recommendations'
     })
   } catch (error) {
     console.error("[v0] Chat API error:", error)
