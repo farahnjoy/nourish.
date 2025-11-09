@@ -3,9 +3,9 @@
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
-import { ArrowRight } from "lucide-react"
+import { ArrowRight, Brain, Camera, BarChart3, Calendar } from "lucide-react"
 
-const rotatingWords = ["body", "mind", "skin", "soul", "energy", "wellness"]
+const rotatingWords = ["body", "mind", "soul", "nourish."]
 
 export default function HomePage() {
   const [wordIndex, setWordIndex] = useState(0)
@@ -31,24 +31,23 @@ export default function HomePage() {
         <div className="absolute bottom-20 left-20 w-96 h-96 rounded-full bg-accent/5 blur-3xl" />
       </div>
 
-      <div className="w-full max-w-2xl text-center space-y-8">
+      <div className="w-full max-w-4xl text-center space-y-8">
         {/* Logo and animated tagline */}
         <div className="space-y-6">
-          <h1 className="font-semibold text-6xl md:text-7xl text-foreground tracking-tight">nourish.</h1>
           <div className="h-20 flex items-center justify-center">
-            <p className="text-2xl md:text-3xl text-muted-foreground font-light">
-              nourish{" "}
+            <h1 className="text-5xl md:text-6xl text-foreground tracking-tight font-semibold">
+              nourish your{" "}
               <span
-                className={`inline-block min-w-[140px] text-left transition-opacity duration-300 ${
+                className={`inline-block min-w-[200px] text-left transition-opacity duration-300 text-primary ${
                   isVisible ? "opacity-100" : "opacity-0"
                 }`}
               >
                 {rotatingWords[wordIndex]}
               </span>
-            </p>
+            </h1>
           </div>
-          <p className="text-muted-foreground text-lg max-w-md mx-auto leading-relaxed">
-            Track your nutrition, understand your body, and optimize your wellness with AI-powered insights.
+          <p className="text-muted-foreground text-xl md:text-2xl max-w-md mx-auto font-medium">
+            Wellness powered by what you eat
           </p>
         </div>
 
@@ -74,24 +73,30 @@ export default function HomePage() {
         </div>
 
         {/* Feature highlights */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 pt-12 text-sm">
-          <div className="space-y-2">
-            <div className="w-10 h-10 rounded-full bg-primary/10 mx-auto flex items-center justify-center text-primary font-semibold">
-              AI
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 pt-12 max-w-5xl mx-auto">
+          <div className="space-y-3 p-6 rounded-2xl bg-background/50 backdrop-blur-sm border border-border hover:shadow-lg transition-shadow">
+            <div className="w-12 h-12 rounded-full bg-primary/10 mx-auto flex items-center justify-center">
+              <Brain className="w-6 h-6 text-primary" />
             </div>
-            <p className="text-muted-foreground">AI-powered symptom analysis</p>
+            <p className="text-muted-foreground font-medium">AI-powered symptom analysis</p>
           </div>
-          <div className="space-y-2">
-            <div className="w-10 h-10 rounded-full bg-primary/10 mx-auto flex items-center justify-center text-primary font-semibold">
-              📸
+          <div className="space-y-3 p-6 rounded-2xl bg-background/50 backdrop-blur-sm border border-border hover:shadow-lg transition-shadow">
+            <div className="w-12 h-12 rounded-full bg-primary/10 mx-auto flex items-center justify-center">
+              <Camera className="w-6 h-6 text-primary" />
             </div>
-            <p className="text-muted-foreground">Smart food scanning</p>
+            <p className="text-muted-foreground font-medium">Smart food scanning</p>
           </div>
-          <div className="space-y-2">
-            <div className="w-10 h-10 rounded-full bg-primary/10 mx-auto flex items-center justify-center text-primary font-semibold">
-              📊
+          <div className="space-y-3 p-6 rounded-2xl bg-background/50 backdrop-blur-sm border border-border hover:shadow-lg transition-shadow">
+            <div className="w-12 h-12 rounded-full bg-primary/10 mx-auto flex items-center justify-center">
+              <BarChart3 className="w-6 h-6 text-primary" />
             </div>
-            <p className="text-muted-foreground">Nutrient tracking dashboard</p>
+            <p className="text-muted-foreground font-medium">Nutrient tracking dashboard</p>
+          </div>
+          <div className="space-y-3 p-6 rounded-2xl bg-background/50 backdrop-blur-sm border border-border hover:shadow-lg transition-shadow">
+            <div className="w-12 h-12 rounded-full bg-primary/10 mx-auto flex items-center justify-center">
+              <Calendar className="w-6 h-6 text-primary" />
+            </div>
+            <p className="text-muted-foreground font-medium">Calendar-based meal suggestions</p>
           </div>
         </div>
       </div>
