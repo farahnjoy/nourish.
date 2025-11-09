@@ -47,77 +47,24 @@ export default function ChatInterface({ user }: { user: User }) {
     setIsLoading(true)
 
     try {
-      // Get user's nutrient data from last 7 days
-      const sevenDaysAgo = new Date()
-      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
-
-      const { data: intakeData, error: intakeError } = await supabase
-        .from("nutrient_intake")
-        .select("nutrient_id, amount, unit")
-        .eq("user_id", user.id)
-        .gte("meal_time", sevenDaysAgo.toISOString())
-
-      if (intakeError) {
-        console.error("Supabase intake error:", intakeError)
-      }
-
-      const { data: nutrients } = await supabase
-        .from("nutrients")
-        .select("id, name, daily_value, unit")
-
-      // Aggregate intake by nutrient
-      const nutrientMap: Record<string, { amount: number; unit: string; target: string }> = {}
-
-      if (intakeData && nutrients) {
-        intakeData.forEach((intake: any) => {
-          const nutrient = nutrients.find((n: any) => n.id === intake.nutrient_id)
-          if (nutrient) {
-            if (!nutrientMap[nutrient.name]) {
-              nutrientMap[nutrient.name] = {
-                amount: 0,
-                unit: intake.unit,
-                target: `${nutrient.daily_value}${nutrient.unit}/day`,
-              }
-            }
-            nutrientMap[nutrient.name].amount += intake.amount
-          }
-        })
-
-        // Calculate daily average
-        Object.keys(nutrientMap).forEach((key) => {
-          nutrientMap[key].amount = Math.round((nutrientMap[key].amount / 7) * 10) / 10
-        })
-      }
-
-      console.log("[Chat] Calling Python endpoint directly...")
-      console.log("[Chat] Symptoms:", userMessage.substring(0, 50))
-
-      // 🌟 FIX: Updated payload to include user_id and use 'symptoms'
       const response = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          symptoms: userMessage, // Matches backend's expected key
-          user_id: user.id, // Passes user ID to the backend
-          user_intake: {
-            nutrients: nutrientMap,
-          },
+          symptoms: userMessage,
+          user_id: user.id,
         }),
       })
 
-      console.log("[Chat] Response status:", response.status)
-
       if (!response.ok) {
         const errorText = await response.text()
-        console.error("[Chat] Python error response:", errorText)
+        console.error("[Chat] Error response:", errorText)
         throw new Error(`Failed to get response: ${response.status}`)
       }
 
       const data = await response.json()
-      console.log("[Chat] Received data:", data)
 
-      // Validate response structure (uses keys from corrected backend response)
-      if (!data.analysis) { 
+      if (!data.analysis) {
         console.error("[Chat] Missing analysis in response:", data)
         throw new Error("Invalid response structure")
       }
@@ -126,13 +73,12 @@ export default function ChatInterface({ user }: { user: User }) {
         ...prev,
         {
           role: "assistant",
-          content: data.analysis, // uses 'analysis' key
-          nutrients: data.recommended_nutrients || [], // uses 'recommended_nutrients' key
-          dietRecommendations: data.diet_recommendations || [], // uses 'diet_recommendations' key
+          content: data.analysis,
+          nutrients: data.recommended_nutrients || [],
+          dietRecommendations: data.diet_recommendations || [],
         },
       ])
 
-      // Save to database
       await supabase.from("symptom_logs").insert({
         user_id: user.id,
         symptoms: userMessage,
