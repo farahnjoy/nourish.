@@ -1,0 +1,95 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  /* Custom color palette for wellness app */
+  --background: #ffffff;
+  --foreground: #4e5424;
+  --card: #f9f8f7;
+  --card-foreground: #4e5424;
+  --popover: #ffffff;
+  --popover-foreground: #4e5424;
+  --primary: #9da57e;
+  --primary-foreground: #ffffff;
+  --secondary: #e8e4e2;
+  --secondary-foreground: #4e5424;
+  --muted: #e8e4e2;
+  --muted-foreground: #7a7d5c;
+  --accent: #f69074;
+  --accent-foreground: #ffffff;
+  --destructive: #e63946;
+  --destructive-foreground: #ffffff;
+  --border: #c1b3a0;
+  --input: #e8e4e2;
+  --ring: #9da57e;
+  --radius: 1rem;
+}
+
+.dark {
+  --background: #2c2e1a;
+  --foreground: #e8e4e2;
+  --card: #3a3d28;
+  --card-foreground: #e8e4e2;
+  --popover: #2c2e1a;
+  --popover-foreground: #e8e4e2;
+  --primary: #b6bfb8;
+  --primary-foreground: #2c2e1a;
+  --secondary: #4e5424;
+  --secondary-foreground: #e8e4e2;
+  --muted: #4e5424;
+  --muted-foreground: #9da57e;
+  --accent: #f69074;
+  --accent-foreground: #ffffff;
+  --destructive: #e63946;
+  --destructive-foreground: #ffffff;
+  --border: #5a5e3a;
+  --input: #4e5424;
+  --ring: #b6bfb8;
+}
+
+@theme inline {
+  --font-sans: "Geist", "Geist Fallback";
+  --font-mono: "Geist Mono", "Geist Mono Fallback";
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
