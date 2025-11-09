@@ -1,4 +1,0 @@
-dedalus-labs>=0.1.0a9
-python-dotenv>=1.0.0
-requests
-google-genai

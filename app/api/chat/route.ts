@@ -1,127 +1,120 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { createClient } from "@supabase/supabase-js"
+import { GoogleGenerativeAI } from "@google/generative-ai"
 
 export async function POST(request: NextRequest) {
-	try {
-		const { message, userId } = await request.json()
+  try {
+    const { message, userId } = await request.json()
 
-		if (!message || !userId) {
-			return NextResponse.json({ error: "Message and userId are required" }, { status: 400 })
-		}
+    if (!message || !userId) {
+      return NextResponse.json({ error: "Message and userId are required" }, { status: 400 })
+    }
 
-		// Ensure these environment variables are correctly set in Vercel
-		const supabase = createClient(
-			process.env.NEXT_PUBLIC_SUPABASE_URL!, 
-			process.env.SUPABASE_SERVICE_ROLE_KEY!
-		)
+    console.log("[v0] Analyzing symptoms for user:", userId)
 
-		// Get nutrient intake from last 7 days
-		const sevenDaysAgo = new Date()
-		sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
+    const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
 
-		const { data: intakeData, error: intakeError } = await supabase
-			.from("nutrient_intake")
-			.select("nutrient_id, amount, unit")
-			.eq("user_id", userId)
-			.gte("meal_time", sevenDaysAgo.toISOString())
-        
-		if (intakeError) {
-			console.error("Supabase Intake Error:", intakeError);
-		}
+    // Get nutrient intake from last 7 days
+    const sevenDaysAgo = new Date()
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
 
-		// Get nutrient names
-		const { data: nutrients } = await supabase
-			.from("nutrients")
-			.select("id, name, daily_value, unit")
+    const { data: intakeData, error: intakeError } = await supabase
+      .from("nutrient_intake")
+      .select("nutrient_id, amount, unit")
+      .eq("user_id", userId)
+      .gte("meal_time", sevenDaysAgo.toISOString())
 
-		// Aggregate intake by nutrient
-		const nutrientMap: Record<string, { amount: number; unit: string; target: string }> = {}
+    const { data: nutrients } = await supabase.from("nutrients").select("id, name, daily_value, unit")
 
-		if (intakeData && nutrients) {
-			intakeData.forEach((intake) => {
-				const nutrient = nutrients.find((n) => n.id === intake.nutrient_id)
-				if (nutrient) {
-					if (!nutrientMap[nutrient.name]) {
-						nutrientMap[nutrient.name] = {
-							amount: 0,
-							unit: intake.unit,
-							target: `${nutrient.daily_value}${nutrient.unit}/day`,
-						}
-					}
-					nutrientMap[nutrient.name].amount += intake.amount
-				}
-			})
+    // Aggregate intake by nutrient
+    const nutrientMap: Record<string, { amount: number; unit: string; target: string }> = {}
 
-			// Calculate daily average
-			Object.keys(nutrientMap).forEach((key) => {
-				nutrientMap[key].amount = Math.round((nutrientMap[key].amount / 7) * 10) / 10
-			})
-		}
+    if (intakeData && nutrients) {
+      intakeData.forEach((intake) => {
+        const nutrient = nutrients.find((n) => n.id === intake.nutrient_id)
+        if (nutrient) {
+          if (!nutrientMap[nutrient.name]) {
+            nutrientMap[nutrient.name] = {
+              amount: 0,
+              unit: intake.unit,
+              target: `${nutrient.daily_value}${nutrient.unit}/day`,
+            }
+          }
+          nutrientMap[nutrient.name].amount += intake.amount
+        }
+      })
 
-		// FIX: Use absolute URL for Python function
-		const baseUrl = process.env.VERCEL_URL 
-			? `https://${process.env.VERCEL_URL}` 
-			: 'http://localhost:3000';
-		
-		const pythonEndpoint = `${baseUrl}/api/analyze-symptoms`;
+      // Calculate daily average
+      Object.keys(nutrientMap).forEach((key) => {
+        nutrientMap[key].amount = Math.round((nutrientMap[key].amount / 7) * 10) / 10
+      })
+    }
 
-		console.log(`[ROUTE] Environment: ${process.env.VERCEL_ENV || 'local'}`);
-		console.log(`[ROUTE] Calling Python backend at: ${pythonEndpoint}`);
-		console.log(`[ROUTE] Sending symptoms: ${message.substring(0, 50)}...`);
+    console.log("[v0] User's current intake:", nutrientMap)
 
-		const response = await fetch(pythonEndpoint, {
-			method: "POST",
-			headers: {
-				"Content-Type": "application/json",
-			},
-			body: JSON.stringify({
-				symptoms: message,
-				user_intake: {
-					nutrients: nutrientMap,
-				},
-			}),
-		})
+    // Use Gemini to analyze symptoms
+    const genai = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!)
+    const model = genai.getGenerativeModel({ model: "gemini-2.0-flash-exp" })
 
-		// Enhanced error checking
-		console.log(`[ROUTE] Python response status: ${response.status}`);
-		
-		if (!response.ok) {
-			const errorBody = await response.text();
-			console.error("[ROUTE] Python error response:", errorBody);
-			throw new Error(`Backend analysis failed: ${response.status} - ${errorBody.substring(0, 200)}`);
-		}
+    const analysisPrompt = `You are a nutrition expert AI assistant. A user is describing symptoms they're experiencing. 
 
-		const data = await response.json()
-		console.log("[ROUTE] Successfully received analysis from Python backend");
+USER SYMPTOMS: ${message}
 
-		// Validate the response structure
-		if (!data.analysis) {
-			console.error("[ROUTE] Missing analysis in response:", data);
-			throw new Error("Invalid response structure from Python backend");
-		}
+USER'S CURRENT NUTRIENT INTAKE (last 7 days average):
+${JSON.stringify(nutrientMap, null, 2)}
 
-		return NextResponse.json({
-			response: data.analysis,
-			nutrients: data.recommended_nutrients || [],
-			dietRecommendations: data.diet_recommendations || [],
-		})
-	} catch (error) {
-		console.error("Chat API error:", error)
-		
-		// Return error details in development
-		const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-		console.error("Full error:", errorMessage);
+Analyze their symptoms in the context of their current nutritional intake. Identify:
+1. Possible nutrient deficiencies that could cause these symptoms
+2. Specific dietary changes they should make
+3. Foods rich in the nutrients they're lacking
 
-		// Return a more informative fallback
-		return NextResponse.json({
-			response: `I'm having trouble analyzing your symptoms right now (Error: ${errorMessage}). Based on common concerns, I recommend considering Vitamin D, B12, and Iron levels, as deficiencies in these are common and can cause fatigue. Please consult with a healthcare professional for personalized advice.`,
-			nutrients: ["Vitamin D", "Vitamin B12", "Iron", "Magnesium"],
-			dietRecommendations: [
-				"Include leafy greens like spinach and kale",
-				"Add fatty fish like salmon for Omega-3s",
-				"Incorporate citrus fruits for Vitamin C",
-				"Consider fortified cereals or supplements",
-			],
-		})
-	}
+Return your response in this JSON format:
+{
+  "analysis": "Your detailed analysis of their symptoms and current nutrition (2-3 paragraphs)",
+  "recommended_nutrients": ["Nutrient 1", "Nutrient 2", ...],
+  "diet_recommendations": ["Specific food recommendation 1", "Specific food recommendation 2", ...]
+}
+
+Be empathetic, specific, and actionable. Reference their actual intake data.`
+
+    const result = await model.generateContent(analysisPrompt)
+    const responseText = result.response.text()
+
+    console.log("[v0] Gemini response:", responseText)
+
+    // Parse JSON from response
+    let analysis
+    try {
+      const jsonMatch = responseText.match(/\{[\s\S]*\}/)
+      if (!jsonMatch) throw new Error("No JSON found")
+      analysis = JSON.parse(jsonMatch[0])
+    } catch (e) {
+      console.error("[v0] Failed to parse response:", e)
+      // Fallback: use raw text as analysis
+      analysis = {
+        analysis: responseText,
+        recommended_nutrients: ["Vitamin D", "Vitamin B12", "Iron", "Magnesium"],
+        diet_recommendations: [
+          "Include leafy greens",
+          "Add fatty fish like salmon",
+          "Incorporate citrus fruits",
+          "Consider fortified cereals",
+        ],
+      }
+    }
+
+    return NextResponse.json({
+      response: analysis.analysis,
+      nutrients: analysis.recommended_nutrients || [],
+      dietRecommendations: analysis.diet_recommendations || [],
+    })
+  } catch (error) {
+    console.error("[v0] Chat API error:", error)
+    return NextResponse.json(
+      {
+        error: error instanceof Error ? error.message : "Unknown error",
+      },
+      { status: 500 },
+    )
+  }
 }
