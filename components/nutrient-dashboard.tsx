@@ -5,9 +5,11 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { ArrowLeft, Calendar, TrendingUp, Award, AlertCircle } from "lucide-react"
+import { Calendar, TrendingUp, Award, AlertCircle, Menu } from "lucide-react"
 import type { User } from "@supabase/supabase-js"
 import Link from "next/link"
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
+import { createClient } from "@/lib/supabase/client"
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts"
 
 interface NutrientIntake {
@@ -48,34 +50,43 @@ const CHART_COLORS = ["#9DA57E", "#F69074", "#B6BFB8", "#C1B3A0", "#4E5424", "#E
 export default function NutrientDashboard({ user, nutrientIntake, meals, nutrients }: Props) {
   const [timeRange, setTimeRange] = useState<"today" | "week" | "month">("today")
 
-  // Calculate nutrient totals
   const nutrientSummary = useMemo(() => {
     const now = new Date()
-    const filtered = nutrientIntake.filter((intake) => {
-      const intakeDate = new Date(intake.meal_time)
+    const filtered = meals.filter((meal) => {
+      const mealDate = new Date(meal.meal_date)
       if (timeRange === "today") {
-        return intakeDate.toDateString() === now.toDateString()
+        return mealDate.toDateString() === now.toDateString()
       } else if (timeRange === "week") {
         const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
-        return intakeDate >= weekAgo
+        return mealDate >= weekAgo
       } else {
         const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
-        return intakeDate >= monthAgo
+        return mealDate >= monthAgo
       }
     })
 
-    const summary: Record<string, { amount: number; unit: string; recommended?: string }> = {}
+    console.log("[v0] Filtered meals for", timeRange, ":", filtered.length)
 
-    filtered.forEach((intake) => {
-      const key = intake.notes?.split(" - ")[0] || "Unknown"
-      if (!summary[key]) {
-        summary[key] = { amount: 0, unit: intake.unit }
+    const summary: Record<string, { amount: number; unit: string }> = {}
+
+    filtered.forEach((meal) => {
+      if (meal.nutrients_detected && Array.isArray(meal.nutrients_detected)) {
+        meal.nutrients_detected.forEach((nutrient: any) => {
+          const name = nutrient.name
+          const amount = Number.parseFloat(nutrient.amount) || 0
+          const unit = nutrient.unit || "g"
+
+          if (!summary[name]) {
+            summary[name] = { amount: 0, unit }
+          }
+          summary[name].amount += amount
+        })
       }
-      summary[key].amount += intake.amount
     })
 
+    console.log("[v0] Nutrient summary:", summary)
     return summary
-  }, [nutrientIntake, timeRange])
+  }, [meals, timeRange])
 
   // Key nutrients to track
   const keyNutrients = [
@@ -144,19 +155,63 @@ export default function NutrientDashboard({ user, nutrientIntake, meals, nutrien
     },
   ]
 
+  const handleLogout = async () => {
+    const supabase = createClient()
+    await supabase.auth.signOut()
+    window.location.href = "/"
+  }
+
   return (
     <div className="min-h-screen flex flex-col">
       {/* Header */}
       <header className="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-10">
         <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" asChild>
-              <Link href="/dashboard">
-                <ArrowLeft className="w-5 h-5" />
-              </Link>
-            </Button>
-            <h1 className="font-semibold text-2xl text-foreground">Nutrient Dashboard</h1>
+            <Sheet>
+              <SheetTrigger asChild>
+                <Button variant="ghost" size="icon" className="md:hidden">
+                  <Menu className="w-5 h-5" />
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="left" className="w-64">
+                <nav className="flex flex-col gap-4 mt-8">
+                  <Link href="/dashboard" className="text-muted-foreground hover:text-primary transition-colors">
+                    Chat
+                  </Link>
+                  <Link href="/scanner" className="text-muted-foreground hover:text-primary transition-colors">
+                    Food Scanner
+                  </Link>
+                  <Link href="/tracking" className="text-foreground hover:text-primary transition-colors font-medium">
+                    Dashboard
+                  </Link>
+                  <Link href="/calendar" className="text-muted-foreground hover:text-primary transition-colors">
+                    Calendar
+                  </Link>
+                  <Button onClick={handleLogout} variant="outline" className="mt-4 bg-transparent">
+                    Log Out
+                  </Button>
+                </nav>
+              </SheetContent>
+            </Sheet>
+            <h1 className="font-semibold text-2xl text-foreground">nourish.</h1>
           </div>
+          <nav className="hidden md:flex items-center gap-6">
+            <Link href="/dashboard" className="text-muted-foreground hover:text-primary transition-colors">
+              Chat
+            </Link>
+            <Link href="/scanner" className="text-muted-foreground hover:text-primary transition-colors">
+              Food Scanner
+            </Link>
+            <Link href="/tracking" className="text-foreground hover:text-primary transition-colors font-medium">
+              Dashboard
+            </Link>
+            <Link href="/calendar" className="text-muted-foreground hover:text-primary transition-colors">
+              Calendar
+            </Link>
+            <Button onClick={handleLogout} variant="outline" size="sm" className="rounded-full bg-transparent">
+              Log Out
+            </Button>
+          </nav>
         </div>
       </header>
 

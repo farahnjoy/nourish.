@@ -5,11 +5,12 @@ import type React from "react"
 import { useState, useRef, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
-import { Camera, Upload, X, Sparkles, ArrowLeft } from "lucide-react"
+import { Camera, Upload, X, Sparkles, Menu } from "lucide-react"
 import type { User } from "@supabase/supabase-js"
 import { createClient } from "@/lib/supabase/client"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 
 interface NutrientInfo {
   name: string
@@ -195,19 +196,62 @@ export default function FoodScanner({ user }: { user: User }) {
     setScanResult(null)
   }
 
+  const handleLogout = async () => {
+    await supabase.auth.signOut()
+    window.location.href = "/"
+  }
+
   return (
     <div className="min-h-screen flex flex-col">
       {/* Header */}
       <header className="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-20">
         <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" asChild>
-              <Link href="/dashboard">
-                <ArrowLeft className="w-5 h-5" />
-              </Link>
-            </Button>
-            <h1 className="font-semibold text-2xl text-foreground">Food Scanner</h1>
+            <Sheet>
+              <SheetTrigger asChild>
+                <Button variant="ghost" size="icon" className="md:hidden">
+                  <Menu className="w-5 h-5" />
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="left" className="w-64">
+                <nav className="flex flex-col gap-4 mt-8">
+                  <Link href="/dashboard" className="text-muted-foreground hover:text-primary transition-colors">
+                    Chat
+                  </Link>
+                  <Link href="/scanner" className="text-foreground hover:text-primary transition-colors font-medium">
+                    Food Scanner
+                  </Link>
+                  <Link href="/tracking" className="text-muted-foreground hover:text-primary transition-colors">
+                    Dashboard
+                  </Link>
+                  <Link href="/calendar" className="text-muted-foreground hover:text-primary transition-colors">
+                    Calendar
+                  </Link>
+                  <Button onClick={handleLogout} variant="outline" className="mt-4 bg-transparent">
+                    Log Out
+                  </Button>
+                </nav>
+              </SheetContent>
+            </Sheet>
+            <h1 className="font-semibold text-2xl text-foreground">nourish.</h1>
           </div>
+          <nav className="hidden md:flex items-center gap-6">
+            <Link href="/dashboard" className="text-muted-foreground hover:text-primary transition-colors">
+              Chat
+            </Link>
+            <Link href="/scanner" className="text-foreground hover:text-primary transition-colors font-medium">
+              Food Scanner
+            </Link>
+            <Link href="/tracking" className="text-muted-foreground hover:text-primary transition-colors">
+              Dashboard
+            </Link>
+            <Link href="/calendar" className="text-muted-foreground hover:text-primary transition-colors">
+              Calendar
+            </Link>
+            <Button onClick={handleLogout} variant="outline" size="sm" className="rounded-full bg-transparent">
+              Log Out
+            </Button>
+          </nav>
         </div>
       </header>
 
