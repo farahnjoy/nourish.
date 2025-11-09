@@ -93,7 +93,7 @@ export default function ChatInterface({ user }: { user: User }) {
       console.log("[Chat] Symptoms:", userMessage.substring(0, 50))
 
       // 🌟 FIX: Call Python analyze-symptoms endpoint directly
-      const response = await fetch("/api/analyze-symptoms", {
+      const response = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
