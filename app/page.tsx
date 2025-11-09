@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import Link from "next/link"
 import { ArrowRight, Brain, Camera, BarChart3, Calendar } from "lucide-react"
 
-const rotatingWords = ["body", "mind", "soul", "nourish"]
+const rotatingWords = ["your body", "your mind", "your soul", "nourish"]
 
 export default function HomePage() {
   const [wordIndex, setWordIndex] = useState(0)
@@ -38,7 +38,7 @@ export default function HomePage() {
             <h1 className="text-5xl md:text-6xl text-foreground tracking-tight font-semibold">
               {wordIndex === 3 ? (
                 <span
-                  className={`transition-opacity duration-300 text-primary ${
+                  className={`transition-opacity duration-300 text-foreground ${
                     isVisible ? "opacity-100" : "opacity-0"
                   }`}
                 >
@@ -46,7 +46,7 @@ export default function HomePage() {
                 </span>
               ) : (
                 <>
-                  nourish your{" "}
+                  nourish{" "}
                   <span
                     className={`inline-block min-w-[200px] text-left transition-opacity duration-300 text-primary ${
                       isVisible ? "opacity-100" : "opacity-0"
