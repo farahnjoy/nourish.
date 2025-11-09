@@ -98,16 +98,31 @@ Be warm, specific, and actionable.`
     const result = await model.generateContent(analysisPrompt)
     const responseText = result.response.text()
 
-    // Parse JSON from response
     let analysis
     try {
-      const jsonMatch = responseText.match(/\{[\s\S]*\}/)
+      // Remove markdown code blocks if present
+      let cleanText = responseText.trim()
+      if (cleanText.startsWith("```json")) {
+        cleanText = cleanText.replace(/```json\n?/g, "").replace(/```\n?/g, "")
+      } else if (cleanText.startsWith("```")) {
+        cleanText = cleanText.replace(/```\n?/g, "")
+      }
+
+      // Find JSON object
+      const jsonMatch = cleanText.match(/\{[\s\S]*\}/)
       if (!jsonMatch) throw new Error("No JSON found")
+
       analysis = JSON.parse(jsonMatch[0])
+
+      // Validate required fields
+      if (!analysis.analysis || typeof analysis.analysis !== "string") {
+        throw new Error("Invalid analysis field")
+      }
     } catch (e) {
-      // Fallback
+      console.error("[v0] JSON parsing error:", e)
+      // Fallback: try to use raw text as analysis
       analysis = {
-        analysis: responseText,
+        analysis: responseText.replace(/```json|```/g, "").trim(),
         recommended_nutrients: ["Vitamin D", "Vitamin B12", "Iron", "Magnesium"],
         diet_recommendations: [
           "Include leafy greens daily",
